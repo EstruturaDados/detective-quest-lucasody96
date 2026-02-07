@@ -2,86 +2,110 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Definição da estrutura da Sala (Nó da Árvore)
+// Estrutura para a Árvore de Pistas (BST)
+typedef struct PistaNode {
+    char conteudo[100];
+    struct PistaNode *esq, *dir;
+} PistaNode;
+
+// Estrutura para o Mapa da Mansão (Árvore Binária)
 typedef struct Sala {
     char nome[50];
+    char pista[100];
     struct Sala *esquerda;
     struct Sala *direita;
 } Sala;
 
-/* * Função: criarSala
- * Objetivo: Aloca dinamicamente uma nova sala no mapa.
+/* * Função: inserirPista
+ * Objetivo: Insere uma pista na BST seguindo a ordem alfabética (strcmp).
  */
-Sala* criarSala(char *nome) {
-    Sala *novaSala = (Sala*)malloc(sizeof(Sala));
-    if (novaSala != NULL) {
-        strcpy(novaSala->nome, nome);
-        novaSala->esquerda = NULL;
-        novaSala->direita = NULL;
+PistaNode* inserirPista(PistaNode *raiz, char *novaPista) {
+    if (raiz == NULL) {
+        PistaNode *novo = (PistaNode*)malloc(sizeof(PistaNode));
+        strcpy(novo->conteudo, novaPista);
+        novo->esq = novo->dir = NULL;
+        return novo;
     }
+    // Lógica BST: Strings menores para a esquerda, maiores para a direita
+    if (strcmp(novaPista, raiz->conteudo) < 0)
+        raiz->esq = inserirPista(raiz->esq, novaPista);
+    else if (strcmp(novaPista, raiz->conteudo) > 0)
+        raiz->dir = inserirPista(raiz->dir, novaPista);
+        
+    return raiz;
+}
+
+/* * Função: criarSala
+ * Objetivo: Cria um cômodo da mansão com uma pista associada.
+ */
+Sala* criarSala(char *nome, char *pista) {
+    Sala *novaSala = (Sala*)malloc(sizeof(Sala));
+    strcpy(novaSala->nome, nome);
+    strcpy(novaSala->pista, pista);
+    novaSala->esquerda = novaSala->direita = NULL;
     return novaSala;
 }
 
-/* * Função: explorarSalas
- * Objetivo: Gerencia a interação do usuário, permitindo navegar pela árvore.
+/* * Função: exibirPistas
+ * Objetivo: Percorre a BST em ordem (In-Order) para listar pistas alfabeticamente.
  */
-void explorarSalas(Sala *atual) {
-    char escolha;
-
-    while (atual != NULL) {
-        printf("\nVoce esta na sala: %s\n", atual->nome);
-
-        // Verifica se é um nó-folha (fim da linha)
-        if (atual->esquerda == NULL && atual->direita == NULL) {
-            printf("Voce chegou ao fim do caminho. Investigacao concluida nesta ala!\n");
-            break;
-        }
-
-        printf("Caminhos disponiveis: ");
-        if (atual->esquerda) printf("[e] Esquerda: %s  ", atual->esquerda->nome);
-        if (atual->direita) printf("[d] Direita: %s", atual->direita->nome);
-        
-        printf("\nEscolha seu caminho (ou 's' para sair): ");
-        scanf(" %c", &escolha);
-
-        if (escolha == 's') {
-            printf("Saindo da investigacao...\n");
-            break;
-        } else if (escolha == 'e' && atual->esquerda != NULL) {
-            atual = atual->esquerda;
-        } else if (escolha == 'd' && atual->direita != NULL) {
-            atual = atual->direita;
-        } else {
-            printf("Caminho invalido! Tente novamente.\n");
-        }
+void exibirPistas(PistaNode *raiz) {
+    if (raiz != NULL) {
+        exibirPistas(raiz->esq);
+        printf("- %s\n", raiz->conteudo);
+        exibirPistas(raiz->dir);
     }
 }
 
-/* * Função: main
- * Objetivo: Monta a estrutura da mansão e inicia o jogo.
+/* * Função: explorarSalasComPistas
+ * Objetivo: Gerencia a navegação e coleta automática para a árvore de inventário.
  */
+void explorarSalasComPistas(Sala *raizMansao) {
+    Sala *atual = raizMansao;
+    PistaNode *inventario = NULL;
+    char escolha;
+
+    while (atual != NULL) {
+        printf("\nVoce entrou em: '%s'\n", atual->nome);
+        
+        if (strlen(atual->pista) > 0) {
+            printf("Pista encontrada: [%s]\n", atual->pista);
+            inventario = inserirPista(inventario, atual->pista);
+        }
+
+        printf("Para onde deseja ir? ");
+        if (atual->esquerda) printf("'e' para %s ", atual->esquerda->nome);
+        if (atual->direita) printf("'d' para %s ", atual->direita->nome);
+        printf("\nOu digite 's' para encerrar a investigacao e ver o relatorio: ");
+        
+        scanf(" %c", &escolha);
+
+        if (escolha == 's') break;
+        else if (escolha == 'e' && atual->esquerda) atual = atual->esquerda;
+        else if (escolha == 'd' && atual->direita) atual = atual->direita;
+        else printf("Caminho sem saida ou opcao invalida!\n");
+    }
+
+    printf("\n--- RELATORIO FINAL DE PISTAS (ORDEM ALFABETICA) ---\n");
+    if (inventario == NULL) printf("Nenhuma pista coletada.\n");
+    else exibirPistas(inventario);
+}
+
 int main() {
-    // Montagem manual da árvore conforme requisitos
-    Sala *hall = criarSala("Hall de Entrada");
-    Sala *salaEstar = criarSala("Sala de Estar");
-    Sala *cozinha = criarSala("Cozinha");
-    Sala *biblioteca = criarSala("Biblioteca");
-    Sala *jardim = criarSala("Jardim");
-    Sala *sotao = criarSala("Sotao");
+    // Montagem da Mansão (Mapa Fixo)
+    Sala *hall = criarSala("Hall de Entrada", "Chave enferrujada");
+    Sala *biblioteca = criarSala("Biblioteca", "Bilhete com ameaca");
+    Sala *cozinha = criarSala("Cozinha", "Aroma de amendoas (veneno?)");
+    Sala *jardim = criarSala("Jardim", "Pegada de lama");
+    Sala *sotao = criarSala("Sotao", "Diario antigo");
 
-    // Definindo as conexões (hierarquia)
-    hall->esquerda = salaEstar;
+    hall->esquerda = biblioteca;
     hall->direita = cozinha;
+    biblioteca->esquerda = jardim;
+    cozinha->direita = sotao;
 
-    salaEstar->esquerda = biblioteca;
-    salaEstar->direita = jardim;
+    printf("--- INICIANDO DETECTIVE QUEST: EXPANSÃO DE PISTAS ---\n");
+    explorarSalasComPistas(hall);
 
-    cozinha->esquerda = sotao;
-
-    // Início da exploração
-    printf("--- BEM-VINDO AO DETECTIVE QUEST ---\n");
-    explorarSalas(hall);
-
-    // Nota: Em um sistema real, seria necessária uma função para liberar a memória (free)
     return 0;
 }
